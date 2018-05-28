@@ -153,7 +153,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.exp(x));
         else return new Variable(
             () => `exp(${x})`,
-            () => Math.exp(x),
+            () => Math.exp(x.value),
             (wrt) => Variable.multiply(
                 x.diff,
                 Variable.exp(x)
@@ -166,7 +166,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.exp(x));
         else return new Variable(
             () => `log(${x})`,
-            () => Math.log(x),
+            () => Math.log(x.value),
             (wrt) => Variable.divide(
                 x.diff(wrt),
                 x
@@ -179,7 +179,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.sin(x));
         else return new Variable(
             () => `sin(${x})`,
-            () => Math.sin(x),
+            () => Math.sin(x.value),
             (wrt) => Variable.multiply(
                 x.diff(wrt),
                 Variable.cos(x)
@@ -192,7 +192,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.cos(x));
         else return new Variable(
             () => `cos(${x})`,
-            () => Math.cos(x),
+            () => Math.cos(x.value),
             (wrt) => Variable.multiply(
                 Variable.minus(x.diff(wrt)),
                 Variable.sin(x)
@@ -205,7 +205,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.tan(x));
         else return new Variable(
             () => `tan(${x})`,
-            () => Math.tan(x),
+            () => Math.tan(x.value),
             (wrt) => Variable.multiply(
                 x.diff(wrt),
                 Variable.multiply(
@@ -221,7 +221,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.csc(x));
         else return new Variable(
             () => `csc(${x})`,
-            () => Math.csc(x),
+            () => Math.csc(x.value),
             (wrt) => Variable.multiply(
                 Variable.minus(
                     x.diff(wrt)
@@ -239,7 +239,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.sec(x));
         else return new Variable(
             () => `sec(${x})`,
-            () => Math.sec(x),
+            () => Math.sec(x.value),
             (wrt) => Variable.multiply(
                 x.diff(wrt),
                 Variable.multiply(
@@ -255,7 +255,7 @@ class Variable {
         if( x.isConstant ) return new Variable(Math.cot(x));
         else return new Variable(
             () => `cot(${x})`,
-            () => Math.cot(x),
+            () => Math.cot(x.value),
             (wrt) => Variable.multiply(
                 Variable.minus(
                     x.diff(wrt)
@@ -271,15 +271,10 @@ class Variable {
     }
 }
 
-const a = Variable.variable("a");
-const b = Variable.variable("b");
-const c = Variable.variable("c");
-const d = Variable.variable("d");
+const x = Variable.variable("x");
+const y = Variable.sin(Variable.multiply(Variable.constant(2), x));
 
-const y = Variable.sin(Variable.divide(Variable.constant(1), a));
+x.assign(Variable.constant(Math.random()));
 
-try {
-    console.log(`${y.diff(a)}`);
-} catch(e) {
-    console.log(e.message);
-}
+console.log(`${x} = ${x.value}`)
+console.log(`d(${y})/d${x} = ${y.diff(x)} : ${y.diff(x).value}`);
