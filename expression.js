@@ -25,6 +25,7 @@ class Variable {
     }
 
     assign(variable) {
+        if (typeof variable == 'number') variable = Variable.constant(variable);
         this._value = variable._value;
         this._diff = (wrt) => variable.diff(wrt);
         this._type = Math.max(variable._type + 1, 2);
@@ -45,6 +46,7 @@ class Variable {
     get opPre() { return this._opPre; }
 
     toString() { return this._str(); }
+    valueOf() { return this.value; }
 
     diff(wrt) {
         if (wrt.isConstant) throw new Error(`${wrt} is constant!\n`);
@@ -55,7 +57,15 @@ class Variable {
         else throw new Error(`I can't differentiate ${this}!\n`);
     }
 
+    add(x2) { return Variable.add(this, x2); }
+    sub(x2) { return Variable.sub(this, x2); }
+    mul(x2) { return Variable.mul(this, x2); }
+    div(x2) { return Variable.div(this, x2); }
+    pow(x2) { return Variable.pow(this, x2); }
+
     static add(x1, x2) {
+        if (typeof x1 == 'number') x1 = Variable.constant(x1);
+        if (typeof x2 == 'number') x2 = Variable.constant(x2);
         if( x1.isConstant && x2.isConstant ) return Variable.constant(x1.value + x2.value);
         else if( x2.isConstant && x2.value == 0 ) return x1;
         else if( x1.isConstant && x1.value == 0 ) return x2;
@@ -71,6 +81,8 @@ class Variable {
         );
     }
     static sub(x1, x2) {
+        if (typeof x1 == 'number') x1 = Variable.constant(x1);
+        if (typeof x2 == 'number') x2 = Variable.constant(x2);
         if( x1.isConstant && x2.isConstant ) return Variable.constant(x1.value - x2.value);
         else if( x2.isConstant && x2.value == 0 ) return x1;
         else if( x1.isConstant && x1.value == 0 ) return Variable.minus(x2);
@@ -85,7 +97,9 @@ class Variable {
             5
         );
     }
-    static multiply(x1, x2) {
+    static mul(x1, x2) {
+        if (typeof x1 == 'number') x1 = Variable.constant(x1);
+        if (typeof x2 == 'number') x2 = Variable.constant(x2);
         if( x1.isConstant && x2.isConstant ) return Variable.constant(x1.value * x2.value);
         else if( x2.isConstant && x2.value == 0 ) return Variable.constant(0);
         else if( x1.isConstant && x1.value == 0 ) return Variable.constant(0);
@@ -102,11 +116,11 @@ class Variable {
                 (x2._opPre>=3?`(${x2})`:`${x2}`),
             () => x1.value * x2.value,
             (wrt) => Variable.add(
-                Variable.multiply(
+                Variable.mul(
                     x1.diff(wrt),
                     x2
                 ),
-                Variable.multiply(
+                Variable.mul(
                     x1,
                     x2.diff(wrt)
                 )
@@ -115,7 +129,9 @@ class Variable {
             3
         );
     }
-    static divide(x1, x2) {
+    static div(x1, x2) {
+        if (typeof x1 == 'number') x1 = Variable.constant(x1);
+        if (typeof x2 == 'number') x2 = Variable.constant(x2);
         if( x2.isConstant && x2.value == 0 ) throw new Error(`${x2} is zero!`);
         else if( x1.isConstant && x2.isConstant ) return Variable.constant(x1.value / x2.value);
         else if( x1.isConstant && x1.value == 0 ) return Variable.constant(0);
@@ -123,13 +139,13 @@ class Variable {
         else return new Variable(
             () => (x1._opPre>3?`(${x1})`:`${x1}`) + "/" + (x2._opPre>=3?`(${x2})`:`${x2}`),
             () => x1.value / x2.value,
-            (wrt) => Variable.divide(
+            (wrt) => Variable.div(
                 Variable.sub(
-                    Variable.multiply(
+                    Variable.mul(
                         x1.diff(wrt), 
                         x2
                     ),
-                    Variable.multiply(
+                    Variable.mul(
                         x1, 
                         x2.diff(wrt)
                     )
@@ -144,6 +160,8 @@ class Variable {
         );
     }
     static pow(x1, x2) {
+        if (typeof x1 == 'number') x1 = Variable.constant(x1);
+        if (typeof x2 == 'number') x2 = Variable.constant(x2);
         if( x1.isConstant && x2.isConstant ) return Variable.constant(Math.pow(x1.value, x2.value))
         else if( x1.isConstant && x1.value == 1 ) return Variable.constant(1)
         else if( x1.isConstant && x1.value == 0 ) return Variable.constant(0)
@@ -152,29 +170,31 @@ class Variable {
             () => (x1._opPre>1?`(${x1})`:`${x1}`) + "^" + (x2._opPre>=1?`(${x2})`:`${x2}`),
             () => Math.pow(x1.value, x2.value),
             (wrt) => Variable.add(
-                Variable.multiply(x1.diff(wrt), Variable.multiply(x2, Variable.pow(x1, Variable.sub(x2, Variable.constant(1))))),
-                Variable.multiply(x2.diff(wrt), Variable.multiply(Variable.log(x1), Variable.pow(x1, x2)))
+                Variable.mul(x1.diff(wrt), Variable.mul(x2, Variable.pow(x1, Variable.sub(x2, Variable.constant(1))))),
+                Variable.mul(x2.diff(wrt), Variable.mul(Variable.log(x1), Variable.pow(x1, x2)))
             ),
             2,
             1
         )
     }
     static minus(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return Variable.constant(-x.value);
         else return new Variable(
             () => "-" + (x._opPre>=2?`(${x})`:`${x}`),
             () => -x.value,
-            (wrt) => Variable.minus(x.diff),
+            (wrt) => Variable.minus(x.diff(wrt)),
             2,
             2
         ); 
     }
     static exp(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.exp(x));
         else return new Variable(
             () => `exp(${x})`,
             () => Math.exp(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 x.diff(wrt),
                 Variable.exp(x)
             ),
@@ -183,11 +203,12 @@ class Variable {
         );
     }
     static log(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.exp(x));
         else return new Variable(
             () => `log(${x})`,
             () => Math.log(x.value),
-            (wrt) => Variable.divide(
+            (wrt) => Variable.div(
                 x.diff(wrt),
                 x
             ),
@@ -196,11 +217,12 @@ class Variable {
         );
     }
     static sin(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.sin(x));
         else return new Variable(
             () => `sin(${x})`,
             () => Math.sin(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 x.diff(wrt),
                 Variable.cos(x)
             ),
@@ -209,11 +231,12 @@ class Variable {
         );
     }
     static cos(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.cos(x));
         else return new Variable(
             () => `cos(${x})`,
             () => Math.cos(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 Variable.minus(x.diff(wrt)),
                 Variable.sin(x)
             ),
@@ -222,11 +245,12 @@ class Variable {
         );
     }
     static tan(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.tan(x));
         else return new Variable(
             () => `tan(${x})`,
             () => Math.tan(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 x.diff(wrt),
                 Variable.pow(
                     Variable.sec(x), 
@@ -238,15 +262,16 @@ class Variable {
         );
     }
     static csc(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.csc(x));
         else return new Variable(
             () => `csc(${x})`,
             () => Math.csc(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 Variable.minus(
                     x.diff(wrt)
                 ),
-                Variable.multiply(
+                Variable.mul(
                     Variable.csc(x),
                     Variable.cot(x)
                 )
@@ -256,13 +281,14 @@ class Variable {
         );
     }
     static sec(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.sec(x));
         else return new Variable(
             () => `sec(${x})`,
             () => Math.sec(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 x.diff(wrt),
-                Variable.multiply(
+                Variable.mul(
                     Variable.sec(x),
                     Variable.tan(x)
                 )
@@ -272,11 +298,12 @@ class Variable {
         );
     }
     static cot(x) {
+        if (typeof x == 'number') x = Variable.constant(x);
         if( x.isConstant ) return new Variable(Math.cot(x));
         else return new Variable(
             () => `cot(${x})`,
             () => Math.cot(x.value),
-            (wrt) => Variable.multiply(
+            (wrt) => Variable.mul(
                 Variable.minus(
                     x.diff(wrt)
                 ),
@@ -289,28 +316,24 @@ class Variable {
             1
         );
     }
+
+    static taylor(f, x, a=0, n=10) {
+        let t = Variable.constant(0);
+        x.assign(Variable.constant(a));
+        let term = f;
+        for (let i=0;i<n;i++) {
+            t = Variable.add(t, Variable.mul(Variable.constant(term.value), Variable.pow(Variable.sub(x, Variable.constant(a)), Variable.constant(i))))
+            term = Variable.div(term.diff(x), Variable.constant(i+1))
+            if (Number.isNaN(term.value)) break;
+        }
+        return t;
+    }
 }
 
 const x = Variable.variable("x");
 const y = Variable.variable("y");
-const z = Variable.add(Variable.exp(x), Variable.log(y));
+const z = Variable.log(x.mul(y));
 
-x.assign(Variable.constant(1));
-y.assign(Variable.constant(Math.E));
-
-console.log("");
-console.log(`${x} = ${x.value}`);
-console.log(`${y} = ${y.value}`);
-console.log(`${z} = ${z.value}`);
-console.log(`${z.diff(x)} = ${z.diff(x).value}`);
-console.log(`${z.diff(y)} = ${z.diff(y).value}`);
-
-x.assign(Variable.constant(0));
-y.assign(Variable.constant(Variable.pow(Variable.constant(Math.E), Variable.constant(2))));
-
-console.log("");
-console.log(`${x} = ${x.value}`);
-console.log(`${y} = ${y.value}`);
-console.log(`${z} = ${z.value}`);
-console.log(`${z.diff(x)} = ${z.diff(x).value}`);
-console.log(`${z.diff(y)} = ${z.diff(y).value}`);
+x.assign(3)
+y.assign(4)
+console.log(`${z.diff(x)} = ${z.diff(x).value}`)
